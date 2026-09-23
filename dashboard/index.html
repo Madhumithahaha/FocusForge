@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusForge Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <h1>FocusForge Analytics</h1>
+        <div class="insight-box" id="insight-box">Loading insights...</div>
+        
+        <div class="charts-grid">
+            <div class="chart-container">
+                <canvas id="verdictChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="needsChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script src="dashboard.js"></script>
+</body>
+</html>

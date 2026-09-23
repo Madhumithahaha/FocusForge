@@ -1,0 +1,28 @@
+/* dashboard.css */
+body {
+    font-family: sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 20px;
+}
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.insight-box {
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.chart-container {
+    background-color: #1e1e1e;
+    padding: 20px;
+    border-radius: 8px;
+}
