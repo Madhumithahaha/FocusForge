@@ -2,25 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FocusForge Dashboard</title>
-    <link rel="stylesheet" href="dashboard.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta http-equiv="refresh" content="0; url=overview.html">
+    <title>FocusForge — Redirecting to Dashboard Overview</title>
+    <script>
+        // Automatic redirection for both static serve and Express server
+        const target = window.location.pathname.endsWith('.html') || window.location.protocol === 'file:' 
+            ? 'overview.html' 
+            : '/dashboard/overview';
+        window.location.replace(target);
+    </script>
 </head>
-<body>
-    <div class="dashboard-container">
-        <h1>FocusForge Analytics</h1>
-        <div class="insight-box" id="insight-box">Loading insights...</div>
-        
-        <div class="charts-grid">
-            <div class="chart-container">
-                <canvas id="verdictChart"></canvas>
-            </div>
-            <div class="chart-container">
-                <canvas id="needsChart"></canvas>
-            </div>
-        </div>
+<body style="background:#080C15; color:#94A3B8; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+    <div style="text-align:center;">
+        <h2 style="color:#FFF;">FocusForge Analytics</h2>
+        <p>Redirecting to <a href="overview.html" style="color:#6366F1;">Dashboard Overview</a>...</p>
     </div>
-    <script src="dashboard.js"></script>
 </body>
 </html>
