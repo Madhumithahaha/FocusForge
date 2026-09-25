@@ -1,21 +1,38 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="refresh" content="0; url=overview.html">
     <title>FocusForge — Redirecting to Dashboard Overview</title>
+
     <script>
-        // Automatic redirection for both static serve and Express server
-        const target = window.location.pathname.endsWith('.html') || window.location.protocol === 'file:' 
-            ? 'overview.html' 
+        // Support both static local serving and Express server routing.
+        const isStaticServer =
+            window.location.protocol === 'file:' ||
+            window.location.port === '5500';
+
+        const target = isStaticServer
+            ? 'overview.html'
             : '/dashboard/overview';
+
         window.location.replace(target);
     </script>
 </head>
-<body style="background:#080C15; color:#94A3B8; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
+
+<body
+    style="background:#080C15; color:#94A3B8; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; margin:0;">
     <div style="text-align:center;">
         <h2 style="color:#FFF;">FocusForge Analytics</h2>
-        <p>Redirecting to <a href="overview.html" style="color:#6366F1;">Dashboard Overview</a>...</p>
+        <p>
+            Redirecting to
+            <a href="overview.html" style="color:#6366F1;">
+                Dashboard Overview
+            </a>...
+        </p>
     </div>
 </body>
+
 </html>
+```
