@@ -2,9 +2,9 @@
 (function() {
     'use strict';
 
-    // API Base URL Detection (handles localhost:3000 or static serve)
-    const isLocalhost3000 = window.location.port === '3000';
-    const API_BASE = isLocalhost3000 ? '' : 'http://localhost:3000';
+    // API Base URL Detection
+    const isLocalhost5000 = window.location.port === '5000';
+    const API_BASE = isLocalhost5000 ? '' : 'http://localhost:5000';
 
     // Global App State
     window.FocusForgeState = {
@@ -48,20 +48,23 @@
 
     async function loadStats(source = window.FocusForgeState.source) {
         try {
-            const stats = await apiFetch(`/stats?source=${source}`);
+            const response = await apiFetch(`/api/stats?source=${source}`);
+            const stats = response.data || null;
             window.FocusForgeState.stats = stats;
             updateHeaderStatus(stats);
             return stats;
         } catch (err) {
-            console.warn('Using offline deterministic fallback for stats');
-            // If offline, return minimal mock structure
-            return null;
+            console.warn('Backend unavailable, returning empty data.', err);
+            const emptyStats = { totalAttempts: 0 };
+            window.FocusForgeState.stats = emptyStats;
+            updateHeaderStatus(emptyStats);
+            return emptyStats;
         }
     }
 
     async function loadInsight(stats, source = window.FocusForgeState.source) {
         try {
-            const data = await apiFetch(`/insight?source=${source}`, {
+            const data = await apiFetch(`/api/insight?source=${source}`, {
                 method: 'POST',
                 body: JSON.stringify({ stats, source })
             });
@@ -73,14 +76,14 @@
     }
 
     async function submitAttempt(data) {
-        return await apiFetch('/stats/attempt', {
+        return await apiFetch('/api/stats/attempt', {
             method: 'POST',
             body: JSON.stringify(data)
         });
     }
 
     async function clearData(type = 'live') {
-        return await apiFetch(`/stats/attempts?type=${type}`, {
+        return await apiFetch(`/api/stats/attempts?type=${type}`, {
             method: 'DELETE'
         });
     }

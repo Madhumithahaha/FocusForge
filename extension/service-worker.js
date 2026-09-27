@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     // --- DEVELOPMENT / MOCK MODE CONFIGURATION ---
-    const USE_MOCK_BACKEND = true; // Set to false to use the real backend
+    const USE_MOCK_BACKEND = false; // Set to false to use the real backend
     const MOCK_VERDICT = 'allow'; // Options: 'deny', 'task', 'allow'
 
     const MOCK_RESPONSES = {
@@ -61,7 +61,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             return true; // Indicates asynchronous response
         }
 
-        const BACKEND_BASE_URL = 'http://localhost:3000';
+        const BACKEND_BASE_URL = 'http://localhost:5000';
         fetch(`${BACKEND_BASE_URL}/judge`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

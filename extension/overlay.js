@@ -139,7 +139,7 @@ function initFocusForgeOverlay() {
         sessionStorage.setItem('ff_attemptCount', attemptCount.toString());
 
         return {
-            site: site,
+            platform: site,
             energy: input.energy,
             excuse: input.excuse,
             timestamp: new Date().toISOString(),
