@@ -293,6 +293,13 @@ function initFocusForgeOverlay() {
         const body = document.querySelector('.ff-body');
         body.innerHTML = ''; // safely clear the input state
         
+        let currentSite = window.location.hostname;
+        if (currentSite.includes('youtube.com')) {
+            currentSite = 'youtube';
+        } else if (currentSite.includes('instagram.com')) {
+            currentSite = 'instagram';
+        }
+
         if (verdictData.distress_flag) {
             const title = document.createElement('h2');
             title.className = 'ff-title';
@@ -400,9 +407,10 @@ function initFocusForgeOverlay() {
                 if (root) root.remove();
                 
                 chrome.storage.local.get(['ff_access_grant'], (result) => {
-                    const grant = result.ff_access_grant;
+                    const grants = result.ff_access_grant || {};
+                    const grant = grants[currentSite];
                     if (grant && grant.accessGranted && grant.expiresAt > Date.now()) {
-                        createFloatingTimer(grant.expiresAt);
+                        createFloatingTimer(grant.expiresAt, currentSite);
                     }
                 });
             });
@@ -415,19 +423,19 @@ function initFocusForgeOverlay() {
 
             chrome.storage.local.get(['ff_access_grant'], (result) => {
                 let expiresAt;
-                const existingGrant = result.ff_access_grant;
+                const grants = result.ff_access_grant || {};
+                const existingGrant = grants[currentSite];
 
                 // Resume existing or create new grant
                 if (existingGrant && existingGrant.accessGranted && existingGrant.expiresAt > Date.now()) {
                     expiresAt = existingGrant.expiresAt;
                 } else {
                     expiresAt = Date.now() + (mins * 60 * 1000);
-                    chrome.storage.local.set({
-                        ff_access_grant: {
-                            accessGranted: true,
-                            expiresAt: expiresAt
-                        }
-                    });
+                    grants[currentSite] = {
+                        accessGranted: true,
+                        expiresAt: expiresAt
+                    };
+                    chrome.storage.local.set({ ff_access_grant: grants });
                 }
 
                 if (currentTimerId) {
@@ -443,10 +451,14 @@ function initFocusForgeOverlay() {
                         currentTimerId = null;
                         
                         // Expire access and re-trigger intervention
-                        chrome.storage.local.remove(['ff_access_grant'], () => {
-                            const root = document.getElementById('ff-overlay-root');
-                            if (root) root.remove();
-                            initFocusForgeOverlay();
+                        chrome.storage.local.get(['ff_access_grant'], (res) => {
+                            const st = res.ff_access_grant || {};
+                            delete st[currentSite];
+                            chrome.storage.local.set({ ff_access_grant: st }, () => {
+                                const root = document.getElementById('ff-overlay-root');
+                                if (root) root.remove();
+                                initFocusForgeOverlay();
+                            });
                         });
                         return;
                     }
@@ -469,7 +481,7 @@ function initFocusForgeOverlay() {
 
 let ff_floating_interval = null;
 
-function createFloatingTimer(expiresAt) {
+function createFloatingTimer(expiresAt, currentSite) {
     if (document.getElementById('ff-floating-timer')) {
         return; // Already exists
     }
@@ -498,8 +510,14 @@ function createFloatingTimer(expiresAt) {
             removeFloatingTimer();
             // Trigger intervention directly if overlay not open
             if (!document.getElementById('ff-overlay-root')) {
-                chrome.storage.local.remove(['ff_access_grant'], () => {
-                    initFocusForgeOverlay();
+                chrome.storage.local.get(['ff_access_grant'], (res) => {
+                    const st = res.ff_access_grant || {};
+                    if (currentSite) {
+                        delete st[currentSite];
+                    }
+                    chrome.storage.local.set({ ff_access_grant: st }, () => {
+                        initFocusForgeOverlay();
+                    });
                 });
             }
             return;

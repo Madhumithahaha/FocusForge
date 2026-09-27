@@ -8,13 +8,21 @@ console.log('FocusForge: Content script executing on ' + window.location.hostnam
 function safeInitOverlay() {
     console.log('FocusForge: safeInitOverlay called');
     
+    let currentSite = window.location.hostname;
+    if (currentSite.includes('youtube.com')) {
+        currentSite = 'youtube';
+    } else if (currentSite.includes('instagram.com')) {
+        currentSite = 'instagram';
+    }
+
     chrome.storage.local.get(['ff_access_grant'], (result) => {
-        const grant = result.ff_access_grant;
+        const grants = result.ff_access_grant || {};
+        const grant = grants[currentSite];
         if (grant && grant.accessGranted && grant.expiresAt > Date.now()) {
             console.log('FocusForge: Access is currently granted until', new Date(grant.expiresAt));
             
             if (typeof createFloatingTimer === 'function') {
-                createFloatingTimer(grant.expiresAt);
+                createFloatingTimer(grant.expiresAt, currentSite);
             }
             
             if (!window.ff_expiration_timer) {
@@ -22,8 +30,12 @@ function safeInitOverlay() {
                 window.ff_expiration_timer = setTimeout(() => {
                     console.log('FocusForge: Access grant expired. Re-showing intervention.');
                     window.ff_expiration_timer = null;
-                    chrome.storage.local.remove(['ff_access_grant'], () => {
-                        showOverlay();
+                    chrome.storage.local.get(['ff_access_grant'], (res) => {
+                        const st = res.ff_access_grant || {};
+                        delete st[currentSite];
+                        chrome.storage.local.set({ ff_access_grant: st }, () => {
+                            showOverlay();
+                        });
                     });
                 }, timeRemaining);
             }
