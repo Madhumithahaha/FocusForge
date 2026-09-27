@@ -26,7 +26,13 @@ class StatsService {
 
     const hourCounts = new Array(24).fill(0);
     const needCounts = {};
-    const energyCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    const energyCounts = {
+      1: { count: 0, denied: 0, task: 0, allowed: 0 },
+      2: { count: 0, denied: 0, task: 0, allowed: 0 },
+      3: { count: 0, denied: 0, task: 0, allowed: 0 },
+      4: { count: 0, denied: 0, task: 0, allowed: 0 },
+      5: { count: 0, denied: 0, task: 0, allowed: 0 }
+    };
     const siteCounts = {};
 
     attempts.forEach(a => {
@@ -45,7 +51,14 @@ class StatsService {
       const energy = Number(a.energy) || 3;
       totalEnergy += energy;
       if (energyCounts[energy] !== undefined) {
-        energyCounts[energy]++;
+        energyCounts[energy].count++;
+        if (a.verdict === 'deny') {
+          energyCounts[energy].denied++;
+        } else if (a.verdict === 'task') {
+          energyCounts[energy].task++;
+        } else if (a.verdict === 'allow') {
+          energyCounts[energy].allowed++;
+        }
       }
 
       // Hour
@@ -113,7 +126,10 @@ class StatsService {
     // Energy distribution
     const attemptsByEnergy = Object.keys(energyCounts).map(energy => ({
       energy: Number(energy),
-      count: energyCounts[energy]
+      count: energyCounts[energy].count,
+      denied: energyCounts[energy].denied,
+      task: energyCounts[energy].task,
+      allowed: energyCounts[energy].allowed
     }));
 
     // Site distribution
