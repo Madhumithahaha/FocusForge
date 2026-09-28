@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "FocusForge",
+  "version": "1.0",
+  "description": "Mindful bouncer for distracting websites",
+  // Minimal permissions required for this extension to function
+  "permissions": [
+    "storage"
+  ],
+  // Specific domains the extension is allowed to interact with
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "*://*.instagram.com/*"
+  ],
+  // The service worker acts as the background event handler
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  // Content scripts are injected into matching web pages
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://*.instagram.com/*"
+      ],
+      "css": [
+        "overlay.css"
+      ],
+      "js": [
+        "overlay.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

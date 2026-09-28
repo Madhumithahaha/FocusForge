@@ -1,0 +1,11 @@
+{
+  "name": "focusforge-root",
+  "version": "1.0.0",
+  "description": "Root package for FocusForge hackathon project",
+  "scripts": {
+    "start": "cd server && npm start",
+    "install-all": "cd server && npm install"
+  },
+  "author": "FocusForge Team",
+  "license": "MIT"
+}

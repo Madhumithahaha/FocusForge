@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusForge — Activity Log & Evidence</title>
+    <meta name="description" content="Transparent audit trail of every attention intervention, energy state, detected need, and outcome.">
+    <link rel="stylesheet" href="dashboard.css">
+    <style>
+        /* Filter Control Bar */
+        .filter-toolbar {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            padding: 18px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .filter-item label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .filter-select, .search-input {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-sm);
+            padding: 7px 12px;
+            font-size: 0.82rem;
+            color: #FFFFFF;
+            font-family: inherit;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .filter-select:focus, .search-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .search-input {
+            width: 220px;
+        }
+
+        /* Activity Table Styling */
+        .table-container {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        .activity-table th {
+            background: var(--bg-surface-elevated);
+            padding: 14px 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-subtle);
+            user-select: none;
+        }
+
+        .activity-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            vertical-align: middle;
+        }
+
+        .activity-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .activity-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .time-cell {
+            font-family: var(--font-mono);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .site-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+
+        /* Energy Rating Stars/Dots */
+        .energy-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .energy-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .energy-dot.filled {
+            background: var(--accent-amber);
+            box-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Expandable Excuse Row */
+        .btn-inspect-excuse {
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            padding: 3px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-inspect-excuse:hover {
+            color: #FFFFFF;
+            border-color: var(--border-medium);
+            background: var(--bg-surface-elevated);
+        }
+
+        .excuse-popup {
+            display: none;
+            margin-top: 8px;
+            padding: 10px 14px;
+            background: var(--bg-surface-elevated);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 4px;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .excuse-popup.open {
+            display: block;
+        }
+
+        /* Mobile Card View (Hidden on desktop, shown on mobile) */
+        .mobile-cards-list {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .mobile-attempt-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .mobile-card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width: 850px) {
+            .table-container {
+                display: none;
+            }
+            .mobile-cards-list {
+                display: flex;
+            }
+            .search-input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Shared App Navigation Bar -->
+    <header class="app-header"></header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Header -->
+        <div class="page-hero">
+            <div class="page-hero-text">
+                <div class="page-hero-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>Auditable Event Log</span>
+                </div>
+                <h1>Attempt Activity & Evidence</h1>
+                <p>The ground-truth log behind your attention fingerprint. Filter by outcome, site, detected need, or self-reported energy.</p>
+            </div>
+
+            <button class="btn-primary" onclick="FocusForge.openTestAttemptModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>+ Record Check-in</span>
+            </button>
+        </div>
+
+        <!-- Filter Toolbar -->
+        <div class="filter-toolbar">
+            <div class="filter-group">
+                <!-- Verdict / Outcome Filter -->
+                <div class="filter-item">
+                    <label>Outcome</label>
+                    <select class="filter-select" id="filter-verdict">
+                        <option value="all">All Verdicts</option>
+                        <option value="deny">⛔ Denied Only</option>
+                        <option value="task">🧘 Wellness Tasks</option>
+                        <option value="allow">✅ Allowed Only</option>
+                    </select>
+                </div>
+
+                <!-- Site Filter -->
+                <div class="filter-item">
+                    <label>Site</label>
+                    <select class="filter-select" id="filter-site">
+                        <option value="all">All Sites</option>
+                        <option value="youtube.com">youtube.com</option>
+                        <option value="reddit.com">reddit.com</option>
+                        <option value="x.com">x.com</option>
+                        <option value="instagram.com">instagram.com</option>
+                        <option value="netflix.com">netflix.com</option>
+                    </select>
+                </div>
+
+                <!-- Need Filter -->
+                <div class="filter-item">
+                    <label>Detected Need</label>
+                    <select class="filter-select" id="filter-need">
+                        <option value="all">All Needs</option>
+                        <option value="tired">Tired</option>
+                        <option value="bored">Bored</option>
+                        <option value="stressed">Stressed</option>
+                        <option value="avoiding">Avoiding</option>
+                        <option value="genuine">Genuine</option>
+                        <option value="lonely">Lonely</option>
+                    </select>
+                </div>
+
+                <!-- Energy Filter -->
+                <div class="filter-item">
+                    <label>Energy (1-5)</label>
+                    <select class="filter-select" id="filter-energy">
+                        <option value="all">All Energy</option>
+                        <option value="1">1 (Exhausted)</option>
+                        <option value="2">2 (Fatigued)</option>
+                        <option value="3">3 (Neutral)</option>
+                        <option value="4">4 (Alert)</option>
+                        <option value="5">5 (High Energy)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Search Filter & Record Counter -->
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <input type="text" class="search-input" id="filter-search" placeholder="Search excuse or site...">
+                <span id="activity-counter" style="font-size:0.8rem; font-family:var(--font-mono); color:var(--text-muted); white-space:nowrap;">
+                    Showing 0 of 0 attempts
+                </span>
+            </div>
+        </div>
+
+        <!-- Desktop Table View -->
+        <div class="table-container">
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Site</th>
+                        <th>Energy</th>
+                        <th>Detected Need</th>
+                        <th>Outcome</th>
+                        <th>Minutes</th>
+                        <th>Source</th>
+                        <th>Stated Intent</th>
+                    </tr>
+                </thead>
+                <tbody id="activity-table-body">
+                    <!-- Populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile Card List View -->
+        <div class="mobile-cards-list" id="activity-cards-body">
+            <!-- Populated dynamically -->
+        </div>
+
+        <!-- Empty Filter Results State -->
+        <div id="no-results-banner" class="empty-state" style="display: none; padding: 40px 20px;">
+            <h3>No attempts matched filters</h3>
+            <p>Try resetting your filter selections or switch between All Data and Live Only.</p>
+            <button class="btn-secondary" id="btn-reset-filters">Reset Filters</button>
+        </div>
+    </main>
+
+    <!-- Shared Footer -->
+    <footer class="app-footer"></footer>
+
+    <!-- Shared Client JS -->
+    <script src="dashboard-shared.js"></script>
+    <script src="activity.js"></script>
+</body>
+</html>
