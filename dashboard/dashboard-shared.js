@@ -302,10 +302,8 @@
         document.getElementById('btn-reseed-data')?.addEventListener('click', async () => {
             if (confirm('Regenerate 14 days of realistic simulated pattern data?')) {
                 try {
-                    // Trigger seed generator script via fetch or direct reset
                     showToast('Reseeding 14-day history...', 'info');
-                    await apiFetch('/stats/attempts?type=all', { method: 'DELETE' });
-                    // Add believable initial batch
+                    await apiFetch('/api/stats/seed', { method: 'POST' });
                     window.location.reload();
                 } catch (e) {
                     showToast('Failed to reseed data', 'error');
