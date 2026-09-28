@@ -80,33 +80,93 @@ FocusForge/
 
 ---
 
-## 🚀 Setup Instructions
+## 🚀 Run Locally (Fresh Machine Setup for Windows)
 
-### 1. Environment Variables
-```bash
-cd server
-cp .env.example .env
-# add your Groq API key to .env
+### A. Clone
+
+```powershell
+git clone https://github.com/Madhumithahaha/FocusForge.git
+cd FocusForge
 ```
 
-### 2. Run the Backend
-```bash
+### B. Backend
+
+```powershell
 cd server
 npm install
+copy .env.example .env
 npm start
-# → runs on http://localhost:3000
 ```
 
-### 3. Load the Chrome Extension
-1. Open `chrome://extensions/`
-2. Enable **Developer mode**
-3. Click **Load unpacked** → select the `extension` folder
+* Backend runs on `http://localhost:5000`
+* `/health` can be checked at `http://localhost:5000/health`
+* `.env` is intentionally not committed.
+* `MOCK_MODE=true` in `.env.example` allows the project to run without a Groq API key.
+* Users only need to configure `GROQ_API_KEY` and set `MOCK_MODE=false` if they want live Groq judging.
 
-### 4. Run the Dashboard
-```bash
-npx serve dashboard
+### C. Dashboard
+
+Open a SECOND terminal:
+
+```powershell
+cd FocusForge\dashboard
+python -m http.server 5500
 ```
-*(or just open `dashboard/index.html` directly in your browser)*
+
+When the server is started from the `dashboard` directory, the correct URL is:
+`http://localhost:5500/overview.html`
+
+Do NOT open `/dashboard/overview` for this Python static-server setup.
+
+Note: Python must be installed and available through PATH.
+
+### D. Chrome Extension
+
+1. Open `chrome://extensions`
+2. Enable Developer mode
+3. Click "Load unpacked"
+4. Select the `FocusForge\extension` folder
+5. Reload the extension after code changes
+6. Open a supported website such as YouTube
+7. Refresh the page if necessary
+
+The extension currently connects to:
+`http://localhost:5000`
+
+Therefore, each teammate must run the backend locally on their own laptop.
+
+---
+
+## 🛠️ Troubleshooting
+
+* **`EADDRINUSE` / port 5000 already in use**: Find the process locking the port (`netstat -ano | findstr :5000`) and kill it (`taskkill /PID <PID> /F`).
+* **port 5500 already in use**: Start the dashboard on a different port (e.g., `python -m http.server 5501`).
+* **dashboard 404 caused by using `/dashboard/overview` instead of `/overview.html`**: Navigate exactly to `http://localhost:5500/overview.html`.
+* **backend not running / extension cannot reach backend**: Verify the backend terminal is running without errors and check `http://localhost:5000/health`.
+* **missing `.env`**: Run `copy .env.example .env` in the `server` folder.
+* **missing `node_modules`**: Run `npm install` in the `server` folder.
+* **Python not installed**: Install Python and ensure it is added to your Windows PATH.
+* **extension loaded but old behavior appears → reload extension + refresh webpage**: Click the reload icon in `chrome://extensions`, then refresh the target page.
+
+---
+
+## 🏗️ Project Architecture
+
+```
+Chrome Extension
+↓
+localhost:5000
+↓
+FocusForge Backend
+↓
+Mock Judge / Groq
+↓
+attempt persistence + stats
+↓
+Dashboard at localhost:5500
+```
+
+The dashboard and backend are separate local servers.
 
 ---
 
