@@ -1,6 +1,65 @@
 // content.js - Injected directly into the target websites (e.g., YouTube, Instagram)
 // This script has access to the webpage's DOM.
 
+function isExtensionContextValid() {
+    try {
+        if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function safeStorageGet(keys, callback) {
+    try {
+        if (!isExtensionContextValid()) return;
+        chrome.storage.local.get(keys, (res) => {
+            try {
+                if (!isExtensionContextValid()) return;
+                if (chrome.runtime.lastError) return;
+                callback(res);
+            } catch (e) {}
+        });
+    } catch (e) {}
+}
+
+function safeStorageSet(data, callback) {
+    try {
+        if (!isExtensionContextValid()) return;
+        chrome.storage.local.set(data, () => {
+            try {
+                if (!isExtensionContextValid()) return;
+                if (chrome.runtime.lastError) return;
+                if (callback) callback();
+            } catch (e) {}
+        });
+    } catch (e) {}
+}
+
+function safeSendMessage(msg, callback) {
+    try {
+        if (!isExtensionContextValid()) {
+            if (callback) callback({ success: false, error: 'Invalid context' });
+            return;
+        }
+        chrome.runtime.sendMessage(msg, (response) => {
+            try {
+                if (!isExtensionContextValid()) {
+                    if (callback) callback({ success: false, error: 'Invalid context' });
+                    return;
+                }
+                if (chrome.runtime.lastError) {
+                    if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
+                    return;
+                }
+                if (callback) callback(response);
+            } catch (e) {}
+        });
+    } catch (e) {
+        if (callback) callback({ success: false, error: 'Invalid context' });
+    }
+}
+
 console.log('FocusForge content script loaded');
 console.log('FocusForge: Content script executing on ' + window.location.hostname);
 
@@ -15,7 +74,7 @@ function safeInitOverlay() {
         currentSite = 'instagram';
     }
 
-    chrome.storage.local.get(['ff_access_grant'], (result) => {
+    safeStorageGet(['ff_access_grant'], (result) => {
         const grants = result.ff_access_grant || {};
         const grant = grants[currentSite];
         if (grant && grant.accessGranted && grant.expiresAt > Date.now()) {
@@ -30,10 +89,10 @@ function safeInitOverlay() {
                 window.ff_expiration_timer = setTimeout(() => {
                     console.log('FocusForge: Access grant expired. Re-showing intervention.');
                     window.ff_expiration_timer = null;
-                    chrome.storage.local.get(['ff_access_grant'], (res) => {
+                    safeStorageGet(['ff_access_grant'], (res) => {
                         const st = res.ff_access_grant || {};
                         delete st[currentSite];
-                        chrome.storage.local.set({ ff_access_grant: st }, () => {
+                        safeStorageSet({ ff_access_grant: st }, () => {
                             showOverlay();
                         });
                     });
@@ -59,9 +118,9 @@ function showOverlay() {
 }
 
 // Send a basic ping message to the background service worker to verify communication
-chrome.runtime.sendMessage({ action: 'ping', url: window.location.href }, (response) => {
-    if (chrome.runtime.lastError) {
-        console.warn('FocusForge: Could not communicate with service worker:', chrome.runtime.lastError.message);
+safeSendMessage({ action: 'ping', url: window.location.href }, (response) => {
+    if (!response || response.error) {
+        console.warn('FocusForge: Could not communicate with service worker:', response && response.error);
     } else {
         console.log('FocusForge: Received response from service worker:', response);
         // ONLY call overlay initialization after confirming service worker communication

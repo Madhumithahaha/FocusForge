@@ -1,6 +1,65 @@
 // overlay.js - Handles the UI for the intervention screen
 // This script will run in the context of the webpage alongside content.js.
 
+function isExtensionContextValid() {
+    try {
+        if (!chrome || !chrome.runtime || !chrome.runtime.id) return false;
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function safeStorageGet(keys, callback) {
+    try {
+        if (!isExtensionContextValid()) return;
+        chrome.storage.local.get(keys, (res) => {
+            try {
+                if (!isExtensionContextValid()) return;
+                if (chrome.runtime.lastError) return;
+                callback(res);
+            } catch (e) {}
+        });
+    } catch (e) {}
+}
+
+function safeStorageSet(data, callback) {
+    try {
+        if (!isExtensionContextValid()) return;
+        chrome.storage.local.set(data, () => {
+            try {
+                if (!isExtensionContextValid()) return;
+                if (chrome.runtime.lastError) return;
+                if (callback) callback();
+            } catch (e) {}
+        });
+    } catch (e) {}
+}
+
+function safeSendMessage(msg, callback) {
+    try {
+        if (!isExtensionContextValid()) {
+            if (callback) callback({ success: false, error: 'Invalid context' });
+            return;
+        }
+        chrome.runtime.sendMessage(msg, (response) => {
+            try {
+                if (!isExtensionContextValid()) {
+                    if (callback) callback({ success: false, error: 'Invalid context' });
+                    return;
+                }
+                if (chrome.runtime.lastError) {
+                    if (callback) callback({ success: false, error: chrome.runtime.lastError.message });
+                    return;
+                }
+                if (callback) callback(response);
+            } catch (e) {}
+        });
+    } catch (e) {
+        if (callback) callback({ success: false, error: 'Invalid context' });
+    }
+}
+
 function initFocusForgeOverlay() {
     console.log('FocusForge: initFocusForgeOverlay entered');
     try {
@@ -158,9 +217,18 @@ function initFocusForgeOverlay() {
         continueBtn.textContent = 'Checking your excuse...';
         errorMsg.style.display = 'none';
 
-        chrome.runtime.sendMessage({ action: 'submitAttempt', payload: attemptData }, (response) => {
-            if (chrome.runtime.lastError || !response || !response.success) {
-                console.error('FocusForge: Backend submission failed', chrome.runtime.lastError || (response && response.error));
+        if (!isExtensionContextValid()) {
+            console.error('FocusForge: Extension context invalidated. Cannot send to backend.');
+            errorMsg.textContent = 'Extension was reloaded. Please refresh the page.';
+            errorMsg.style.display = 'block';
+            continueBtn.disabled = false;
+            continueBtn.textContent = originalBtnText;
+            return;
+        }
+
+        safeSendMessage({ action: 'submitAttempt', payload: attemptData }, (response) => {
+            if (!response || !response.success) {
+                console.error('FocusForge: Backend submission failed', response && response.error);
                 errorMsg.textContent = 'Unable to reach the judge. Please try again.';
                 errorMsg.style.display = 'block';
                 
@@ -248,6 +316,11 @@ function initFocusForgeOverlay() {
         body.appendChild(instructionLabel);
         
         currentTimerId = setInterval(() => {
+            if (!isExtensionContextValid()) {
+                clearInterval(currentTimerId);
+                currentTimerId = null;
+                return;
+            }
             remaining--;
             if (remaining <= 0) {
                 remaining = 0;
@@ -406,7 +479,7 @@ function initFocusForgeOverlay() {
                 const root = document.getElementById('ff-overlay-root');
                 if (root) root.remove();
                 
-                chrome.storage.local.get(['ff_access_grant'], (result) => {
+                safeStorageGet(['ff_access_grant'], (result) => {
                     const grants = result.ff_access_grant || {};
                     const grant = grants[currentSite];
                     if (grant && grant.accessGranted && grant.expiresAt > Date.now()) {
@@ -421,7 +494,7 @@ function initFocusForgeOverlay() {
             body.appendChild(remainingLabel);
             body.appendChild(continueBtn);
 
-            chrome.storage.local.get(['ff_access_grant'], (result) => {
+            safeStorageGet(['ff_access_grant'], (result) => {
                 let expiresAt;
                 const grants = result.ff_access_grant || {};
                 const existingGrant = grants[currentSite];
@@ -435,7 +508,7 @@ function initFocusForgeOverlay() {
                         accessGranted: true,
                         expiresAt: expiresAt
                     };
-                    chrome.storage.local.set({ ff_access_grant: grants });
+                    safeStorageSet({ ff_access_grant: grants });
                 }
 
                 if (currentTimerId) {
@@ -444,6 +517,11 @@ function initFocusForgeOverlay() {
                 }
                 
                 const updateDisplay = () => {
+                    if (!isExtensionContextValid()) {
+                        if (currentTimerId) clearInterval(currentTimerId);
+                        currentTimerId = null;
+                        return;
+                    }
                     const remainingMs = expiresAt - Date.now();
                     if (remainingMs <= 0) {
                         countdownTimer.textContent = "00:00";
@@ -451,10 +529,10 @@ function initFocusForgeOverlay() {
                         currentTimerId = null;
                         
                         // Expire access and re-trigger intervention
-                        chrome.storage.local.get(['ff_access_grant'], (res) => {
+                        safeStorageGet(['ff_access_grant'], (res) => {
                             const st = res.ff_access_grant || {};
                             delete st[currentSite];
-                            chrome.storage.local.set({ ff_access_grant: st }, () => {
+                            safeStorageSet({ ff_access_grant: st }, () => {
                                 const root = document.getElementById('ff-overlay-root');
                                 if (root) root.remove();
                                 initFocusForgeOverlay();
@@ -503,6 +581,11 @@ function createFloatingTimer(expiresAt, currentSite) {
     if (ff_floating_interval) clearInterval(ff_floating_interval);
     
     const updateDisplay = () => {
+        if (!isExtensionContextValid()) {
+            if (ff_floating_interval) clearInterval(ff_floating_interval);
+            ff_floating_interval = null;
+            return;
+        }
         const remainingMs = expiresAt - Date.now();
         if (remainingMs <= 0) {
             clearInterval(ff_floating_interval);
@@ -510,12 +593,12 @@ function createFloatingTimer(expiresAt, currentSite) {
             removeFloatingTimer();
             // Trigger intervention directly if overlay not open
             if (!document.getElementById('ff-overlay-root')) {
-                chrome.storage.local.get(['ff_access_grant'], (res) => {
+                safeStorageGet(['ff_access_grant'], (res) => {
                     const st = res.ff_access_grant || {};
                     if (currentSite) {
                         delete st[currentSite];
                     }
-                    chrome.storage.local.set({ ff_access_grant: st }, () => {
+                    safeStorageSet({ ff_access_grant: st }, () => {
                         initFocusForgeOverlay();
                     });
                 });
