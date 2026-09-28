@@ -2,6 +2,12 @@
 (function() {
     'use strict';
 
+    // API Base URL Detection — same logic as dashboard-shared.js, kept local
+    // here since activity.js uses a raw fetch() rather than the shared
+    // apiFetch() helper.
+    const isLocalhost5000 = window.location.port === '5000';
+    const API_BASE = isLocalhost5000 ? '' : 'http://localhost:5000';
+
     let allLoadedAttempts = [];
 
     function formatTime(isoStr) {
@@ -79,7 +85,7 @@
         if (search.trim()) params.append('search', search.trim());
 
         try {
-            const res = await fetch(`/stats/activity?${params.toString()}`);
+            const res = await fetch(`${API_BASE}/api/stats/activity?${params.toString()}`);
             const data = await res.json();
             const attempts = data.attempts || [];
             allLoadedAttempts = attempts;

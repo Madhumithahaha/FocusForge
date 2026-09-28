@@ -250,7 +250,7 @@ function initFocusForgeOverlay() {
                 return;
             }
             
-            renderVerdict(verdictData);
+            renderVerdict(verdictData, attemptData);
         });
     }
 
@@ -362,7 +362,7 @@ function initFocusForgeOverlay() {
         body.appendChild(continueBtn);
     }
 
-    function renderVerdict(verdictData) {
+    function renderVerdict(verdictData, attemptData) {
         const body = document.querySelector('.ff-body');
         body.innerHTML = ''; // safely clear the input state
         
@@ -504,11 +504,21 @@ function initFocusForgeOverlay() {
                     expiresAt = existingGrant.expiresAt;
                 } else {
                     expiresAt = Date.now() + (mins * 60 * 1000);
+                    // excuse/energy/need are kept with the grant so the mid-window
+                    // on-task check (content.js) can compare what the user is
+                    // actually viewing against the reason that earned this access.
                     grants[currentSite] = {
                         accessGranted: true,
-                        expiresAt: expiresAt
+                        expiresAt: expiresAt,
+                        excuse: attemptData && attemptData.excuse,
+                        energy: attemptData && attemptData.energy,
+                        need: verdictData.need_category || verdictData.need || undefined
                     };
-                    safeStorageSet({ ff_access_grant: grants });
+                    safeStorageSet({ ff_access_grant: grants }, () => {
+                        if (typeof scheduleComplianceCheck === 'function') {
+                            scheduleComplianceCheck(currentSite, grants[currentSite]);
+                        }
+                    });
                 }
 
                 if (currentTimerId) {

@@ -83,6 +83,37 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return true; // Indicates asynchronous response
     }
 
+    // Mid-grant compliance check: is the page content still consistent with
+    // the reason that earned the access grant? Fails open — if the backend is
+    // unreachable the content script simply skips the nudge.
+    if (request.action === 'verifyAttempt') {
+        if (USE_MOCK_BACKEND) {
+            sendResponse({ success: true, data: { success: true, onTask: true, confidence: 0.5, message: 'Mock: on track.' } });
+            return false;
+        }
+
+        const BACKEND_BASE_URL = 'http://localhost:5000';
+        fetch(`${BACKEND_BASE_URL}/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request.payload)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                sendResponse({ success: true, data: data });
+            })
+            .catch(error => {
+                console.error('FocusForge: verify fetch error:', error);
+                sendResponse({ success: false, error: 'Failed to reach the backend.' });
+            });
+        return true; // Indicates asynchronous response
+    }
+
     // Required for asynchronous responses in Manifest V3 if we do async work
     // return true; 
 });

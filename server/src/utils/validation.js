@@ -135,6 +135,78 @@ function detectPromptInjection(excuse) {
   return PROMPT_INJECTION_PATTERNS.some((re) => re.test(excuse));
 }
 
+// ---- POST /verify (compliance check) ----
+// The client re-sends the original excuse (+ energy/platform) alongside a
+// short, page-derived "observedContent" signal (e.g. a video title) so the
+// server can judge whether the granted time is actually being used for the
+// stated reason. observedContent is untrusted, page-derived text — treated
+// with the same sanitization + injection scrutiny as the excuse.
+function isNonEmptyTrimmedString(value, maxLength) {
+  return typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength;
+}
+
+function validateVerifyInput(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return { valid: false, error: 'Request body must be a JSON object' };
+  }
+
+  const { excuse, observedContent } = data;
+
+  if (!isNonEmptyTrimmedString(excuse, 500)) {
+    return { valid: false, error: 'excuse must be a non-empty string up to 500 characters' };
+  }
+  if (!isNonEmptyTrimmedString(observedContent, 500)) {
+    return { valid: false, error: 'observedContent must be a non-empty string up to 500 characters' };
+  }
+
+  let energy;
+  if (data.energy !== undefined) {
+    if (!isIntInRange(data.energy, 1, 5)) {
+      return { valid: false, error: 'energy must be an integer from 1 to 5' };
+    }
+    energy = data.energy;
+  }
+
+  let platform;
+  if (data.platform !== undefined) {
+    if (typeof data.platform !== 'string' || data.platform.trim().length === 0 || data.platform.length > 100) {
+      return { valid: false, error: 'platform must be a non-empty string up to 100 characters when provided' };
+    }
+    platform = data.platform.trim();
+  }
+
+  let need;
+  if (data.need !== undefined) {
+    if (typeof data.need !== 'string' || data.need.length > 50) {
+      return { valid: false, error: 'need must be a string up to 50 characters when provided' };
+    }
+    need = data.need;
+  }
+
+  return {
+    valid: true,
+    value: {
+      excuse: excuse.trim(),
+      observedContent: observedContent.trim(),
+      energy,
+      platform,
+      need,
+    },
+  };
+}
+
+// Same redaction rules as the excuse, capped shorter — this text is a page
+// signal (e.g. a video title), not free-form user input.
+function sanitizeObservedContent(text) {
+  if (typeof text !== 'string') return '';
+  let out = collapseWhitespace(stripControlChars(text));
+  for (const pattern of SANITIZE_PATTERNS) {
+    out = out.replace(new RegExp(pattern.source, 'gi'), '[REDACTED]');
+  }
+  if (out.length > 300) out = out.slice(0, 300);
+  return out;
+}
+
 module.exports = {
   isNonEmptyString,
   isIntInRange,
@@ -143,4 +215,6 @@ module.exports = {
   sanitizePlatform,
   detectPromptInjection,
   PROMPT_INJECTION_PATTERNS,
+  validateVerifyInput,
+  sanitizeObservedContent,
 };

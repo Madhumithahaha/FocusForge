@@ -175,7 +175,12 @@ The dashboard and backend are separate local servers.
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/judge` | Evaluates a site access attempt |
-| `GET` | `/stats` | Returns attempt statistics |
+| `GET` | `/api/stats?source=all\|live\|simulated` | Returns attempt statistics |
+| `GET` | `/api/stats/activity` | Individual attempts for the Activity page (filters: `source, verdict, site, need, energy, search`) |
+| `POST` | `/api/stats/attempt` | Records a manual live attempt (dashboard modal) |
+| `POST` | `/api/stats/seed` | Regenerates simulated history (keeps live records) |
+| `DELETE` | `/api/stats/attempts?type=live\|all` | Clears live-only or all records |
+| `POST` | `/verify` | On-task check: does the currently viewed content still match the stated reason? Body: `{ excuse, observedContent, energy?, platform?, need? }` → `{ onTask, confidence, message }` |
 | `POST` | `/insight` | Generates a wellness insight |
 
 ---

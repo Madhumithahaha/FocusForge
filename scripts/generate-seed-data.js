@@ -142,63 +142,28 @@ function generateBelievableAttempts() {
             const excuseList = excusesByNeed[need] || excusesByNeed.other;
             const excuse = excuseList[Math.floor(Math.random() * excuseList.length)];
 
+            // Field names match the live schema written by analyticsService.recordAttempt()
+            // (server/src/services/analyticsService.js) so simulated and live records are
+            // read identically by statsService / the Activity API.
             attempts.push({
                 id: `sim-${idCounter++}`,
                 timestamp: dateObj.toISOString(),
-                site,
+                platform: site,
                 energy,
-                need_category: need,
+                need,
                 excuse,
-                excuse_strength: excuseStrength,
+                excuseStrength,
                 verdict,
-                minutes_granted: minutesGranted,
-                estimated_reclaimed_minutes: estimatedReclaimed,
-                micro_task: microTask,
-                attemptCount: Math.floor(Math.random() * 3) + 1,
+                requestedMinutes: minutesGranted || undefined,
+                resetSeconds: verdict === 'allow' ? 0 : 60,
+                minutesGranted,
+                estimatedReclaimedMinutes: estimatedReclaimed,
+                microTask,
+                escalationLevel: 0,
                 source: 'simulated'
             });
         }
     }
-
-    // Add 2 realistic live records for today so Live Only has initial demonstrable data
-    const todayBase = new Date(now);
-    todayBase.setHours(14, 25, 0, 0);
-    attempts.push({
-        id: `live-${idCounter++}`,
-        timestamp: todayBase.toISOString(),
-        site: 'youtube.com',
-        energy: 2,
-        need_category: 'tired',
-        excuse: "Heavy afternoon crash, just wanted music.",
-        excuse_strength: 2,
-        verdict: 'task',
-        minutes_granted: 5,
-        estimated_reclaimed_minutes: 12,
-        micro_task: {
-            type: 'stretch',
-            seconds: 60,
-            title: '60-Second Physical Stretch'
-        },
-        attemptCount: 1,
-        source: 'live'
-    });
-
-    const liveRecent = new Date(now - 45 * 60 * 1000); // 45 min ago
-    attempts.push({
-        id: `live-${idCounter++}`,
-        timestamp: liveRecent.toISOString(),
-        site: 'reddit.com',
-        energy: 1,
-        need_category: 'bored',
-        excuse: "Waiting for build to finish, feeling lazy.",
-        excuse_strength: 1,
-        verdict: 'deny',
-        minutes_granted: 0,
-        estimated_reclaimed_minutes: 18,
-        micro_task: null,
-        attemptCount: 2,
-        source: 'live'
-    });
 
     // Sort chronologically ascending
     attempts.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -206,7 +171,19 @@ function generateBelievableAttempts() {
     return attempts;
 }
 
-const data = generateBelievableAttempts();
-fs.mkdirSync(path.dirname(dataPath), { recursive: true });
-fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf-8');
-console.log(`Generated ${data.length} believable seed attempts (${data.filter(d => d.source === 'simulated').length} simulated, ${data.filter(d => d.source === 'live').length} live) at ${dataPath}`);
+// Exported so the server can regenerate simulated history on demand
+// (see AnalyticsService.reseedSimulated(), used by POST /api/stats/seed)
+// without shelling out to this script. Real 'live' records are never
+// touched here — only ever written by /judge or the dashboard's manual
+// "Record Live Attempt" modal.
+module.exports = { generateBelievableAttempts };
+
+// Standalone CLI usage: `node scripts/generate-seed-data.js` writes
+// server/data/attempts.json directly, replacing ALL existing data
+// (including any live records) with a fresh simulated batch.
+if (require.main === module) {
+    const data = generateBelievableAttempts();
+    fs.mkdirSync(path.dirname(dataPath), { recursive: true });
+    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf-8');
+    console.log(`Generated ${data.length} believable simulated seed attempts at ${dataPath}`);
+}

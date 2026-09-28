@@ -9,6 +9,7 @@ const apiLimiter = require('./middleware/rateLimit');
 const securityMiddleware = require('./middleware/security');
 const judgeRouter = require('./routes/judge');
 const statsRouter = require('./routes/stats');
+const verifyRouter = require('./routes/verify');
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use((req, res, next) => {
 // Rate limiting (appropriate for an AI API)
 app.use('/api/', apiLimiter);
 app.use('/judge', apiLimiter);
+app.use('/verify', apiLimiter);
 
 // Health endpoint (reports mock mode so clients/tests know which judge is active)
 app.get('/health', (req, res) => {
@@ -44,6 +46,8 @@ app.get('/health', (req, res) => {
 // API routes (judge router serves both POST /judge and POST /api/judge)
 app.use('/judge', judgeRouter);
 app.use('/api/judge', judgeRouter);
+app.use('/verify', verifyRouter);
+app.use('/api/verify', verifyRouter);
 app.use('/api/stats', statsRouter);
 
 // 404 handler

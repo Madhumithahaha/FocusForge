@@ -3,19 +3,46 @@ const path = require('path');
 
 const ATTEMPTS_FILE = path.join(__dirname, '../../data/attempts.json');
 
+// Same palette activity.js already uses client-side for need badges, so the
+// Overview need-breakdown donut and the Activity table agree visually.
+const NEED_COLORS = {
+  tired: '#F59E0B',
+  bored: '#3B82F6',
+  stressed: '#EC4899',
+  lonely: '#8B5CF6',
+  avoiding: '#EF4444',
+  genuine: '#10B981',
+  other: '#6B7280'
+};
+
+function capitalize(s) {
+  return typeof s === 'string' && s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
 class StatsService {
-  async getStats() {
-    let attempts = [];
+  // source: 'all' (default) | 'live' | 'simulated' — filters which records
+  // are aggregated. liveCount/simulatedCount in the response always reflect
+  // the FULL unfiltered dataset so the header pill ("N live / M sim") stays
+  // accurate no matter which view is selected.
+  async getStats({ source = 'all' } = {}) {
+    let allAttempts = [];
     try {
       const data = await fs.readFile(ATTEMPTS_FILE, 'utf8');
       if (data.trim()) {
-        attempts = JSON.parse(data);
+        allAttempts = JSON.parse(data);
       }
     } catch (err) {
       if (err.code !== 'ENOENT') {
         console.error('StatsService: Error reading attempts.json', err);
       }
     }
+
+    const liveCount = allAttempts.filter(a => a.source === 'live').length;
+    const simulatedCount = allAttempts.filter(a => a.source === 'simulated').length;
+
+    const attempts = source === 'live' || source === 'simulated'
+      ? allAttempts.filter(a => a.source === source)
+      : allAttempts;
 
     const totalAttempts = attempts.length;
     let denied = 0;
@@ -110,16 +137,17 @@ class StatsService {
     // Need distribution
     let mostCommonNeed = 'None';
     let maxNeedCount = -1;
-    const attemptsByNeed = Object.keys(needCounts).map(label => {
-      const count = needCounts[label];
+    const attemptsByNeed = Object.keys(needCounts).map(key => {
+      const count = needCounts[key];
       if (count > maxNeedCount) {
         maxNeedCount = count;
-        mostCommonNeed = label;
+        mostCommonNeed = capitalize(key);
       }
       return {
-        label,
+        label: capitalize(key),
         count,
-        percentage: Math.round((count / totalAttempts) * 100)
+        percentage: Math.round((count / totalAttempts) * 100),
+        color: NEED_COLORS[key] || NEED_COLORS.other
       };
     }).sort((a, b) => b.count - a.count);
 
@@ -150,6 +178,8 @@ class StatsService {
 
     return {
       totalAttempts,
+      liveCount,
+      simulatedCount,
       denied,
       task,
       allowed,

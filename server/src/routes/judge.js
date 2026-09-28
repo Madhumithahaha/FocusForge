@@ -96,10 +96,12 @@ router.post('/', async (req, res, next) => {
       energy,
       verdict: result.verdict,
       need: result.need,
+      excuse: sanitizedExcuse,
       requestedMinutes,
       resetSeconds: result.resetSeconds,
       minutesGranted: adaptedData.minutes_granted,
-      escalationLevel: escalation.level
+      escalationLevel: escalation.level,
+      source: 'live'
     });
 
     return res.json({
